@@ -28,6 +28,28 @@
           - ca-certificates
         state: present
 
+    # ADDED: ensure kernel modules package and load/persist modules
+    - name: Ensure kernel modules for Kubernetes networking are installed/loaded
+      ansible.builtin.shell: |
+        set -e
+        apt-get update -y
+        DEBIAN_FRONTEND=noninteractive apt-get install -y linux-modules-extra-$(uname -r)
+
+        # persist required modules
+        cat >/etc/modules-load.d/k8s.conf <<'EOF'
+        br_netfilter
+        overlay
+        vxlan
+        EOF
+
+        # load them now
+        modprobe br_netfilter || true
+        modprobe overlay || true
+        modprobe vxlan || true
+      args:
+        executable: /bin/bash
+    # --------------------------------------------------------------------
+
     - name: Add Kubernetes GPG key & repository
       ansible.builtin.shell: |
         rm /etc/apt/keyrings/kubernetes-apt-keyring.gpg
